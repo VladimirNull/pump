@@ -12,7 +12,7 @@ class CellWalker(object):
         self.db = MongoClient().test
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
-                     'player_id', 'people', 'shit', 'capacity','nature','_id')
+                     'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')
         thread = threading.Thread(target=self.run, args=())
         thread.daemon = True 
         thread.start()
@@ -25,9 +25,8 @@ class CellWalker(object):
         while True:
             self.longwalk()
             i += 1;
+            if i>12000: break;
             time.sleep(0.1)
-            if i > 0: break;
-            
     def refresh(self):
         pass
     
@@ -39,62 +38,95 @@ class CellWalker(object):
                 main_data[key] = document[key]
             self.step(main_data)
             
-    def step(self,main_data):
-        produce_shit = 0
-        #print main_data
-        #MINE
-        if main_data['capacity'] == 0:
-            packets_pumped = 0
-        else:  
-            packets_pumped = main_data['PRESSURE']
-            if main_data['capacity'] - packets_pumped < 0:
-                packets_pumped = main_data['capacity']
-                main_data['capacity'] = 0
-            else:
-                main_data['capacity'] -= packets_pumped
-        #FACTORY
-        gold = packets_pumped * main_data['MANA_GOLD']
-        produce_shit += packets_pumped * main_data['MANA_SHIT']
-        #print produce_shit
-        #FILTERS
-        produce_shit -= 0
-        #NATURE AND PEOPLE
-        main_data['shit'] = main_data['shit'] + produce_shit
-        tmp_nature = 0
-        if main_data['shit'] < (main_data['nature'] * 0.05):
-            #grow
-            tmp_nature = main_data['nature'] + (main_data['NATURE_LEVEL'] - main_data['nature'])/main_data['NATURE_LEVEL']
-        elif main_data['shit'] > (main_data['nature'] * 0.05) and main_data['shit'] < (main_data['nature'] * 0.26):
-            tmp_nature = main_data['nature']
-        elif main_data['shit'] > (main_data['nature'] * 0.25) and main_data['shit'] < (main_data['nature']):
-            #wither
-            tmp_nature = main_data['nature'] - (math.sqrt(main_data['shit']) + main_data['people']**(1/3.0))
-            if tmp_nature < 0 : tmp_nature = 0
-        elif main_data['shit'] > (main_data['nature']):
-            tmp_nature = 0
-        main_data['nature'] = tmp_nature
+    def mine(self,capacity,packets_pumped):
+        #TODO random
+        if capacity - packets_pumped < 0:
+            ret_packets_pumped = capacity
+            ret_capacity = 0
+        else:
+            ret_packets_pumped = packets_pumped
+            ret_capacity = capacity - packets_pumped
+        return ret_capacity,ret_packets_pumped
+
+    def factory(self,packets_pumped,mana_gold,mana_shit):
+        #TODO random
+        return packets_pumped * mana_gold, packets_pumped * mana_shit
         
-        children_of_nature = float(main_data['people']/((main_data['nature']+0.000001)*10))
-        print children_of_nature
-        if children_of_nature < 0.5:
-            print "free"
-            main_data['people'] += (main_data['people']/2)
-        elif children_of_nature > 0.49 and children_of_nature < 1:
-            print "norm"
-            main_data['people'] += math.sqrt(main_data['people'])
-        elif children_of_nature > 1:
-            print "die"
-            main_data['people']
-            main_data['people'] -= (main_data['people'] - main_data['nature']*10)
-            main_data['people']
-        elif children_of_nature == 0:
-            print "wind"
+    def filters(self,shit,produce_shit):
+        #TODO clean shit
+        return shit+produce_shit
+        
+    def nature_in(self,nature,shit,nature_level,people):
+        junk_yard = ((nature)*20)/(shit+0.0001)# 1 tree vs 20 piece of shit
+        
+        if junk_yard > 1:#grow
+            tmp_nature = nature + ((nature_level - nature)/100)
+            if tmp_nature > nature: 
+                tmp_nature = nature_level
+                
+        elif junk_yard > 0.80 and junk_yard < 1:#constantly
+            tmp_nature = nature
             
+        elif junk_yard > 0.20 and junk_yard < 0.80:#wither
+            bad_people = (abs(people)**(1/3.0))/500
+            bad_shit = (math.sqrt(shit))/300
+            tmp_nature = nature - (bad_people + bad_shit)            
+                
+        elif junk_yard > 0 and junk_yard < 0.20:#great wither
+            bad_people = (abs(people)**(1/3.0))/350
+            bad_shit = (math.sqrt(shit))/195
+            tmp_nature = nature - (bad_people + bad_shit)
+                
+        elif junk_yard == 0:#wind
+            tmp_nature = 0
+            
+        if tmp_nature < 0 : tmp_nature = 0    
+        return tmp_nature
+    
+    def people_in(self,people,nature,shit):
+        #TODO activate shit
+        tmp_people = 0
+        perform_people = (nature)*10 # 1 tree vs 100 people
+        children_of_nature = ((nature)*10)/(people+0.0001)
+        if children_of_nature > 1:#free
+            born = (people/4)+random.randrange(1,int(abs(people))**(1/3.0))
+            tmp_people = people + born
+        elif children_of_nature > 0.49 and children_of_nature < 1:#norm
+            tmp_people = people + (math.sqrt(people)/4)
+        elif children_of_nature < 0.5:#help us
+            #TODO this
+            tmp_people = people - (math.sqrt(people)+random.randrange(1,int(abs(people)**(1/3.0))))
+        if tmp_people < 0 or (round(tmp_people) == 0.0):
+            tmp_people = 0
+        return tmp_people
+        
+    def regeneration_mine(self,regeneration,capacity,capacity_level):
+        capacity += (float(regeneration)/100)+(float(random.randrange(1,10))/200)
+        if capacity > capacity_level: 
+            capacity = capacity_level
+        return capacity
+        
+
+    def step(self,main_data):
+        #MINE
+        main_data['capacity'],packets_pumped = (self.mine(main_data['capacity'],(main_data['PRESSURE']*main_data['pump_level'])))
+        
+        #FACTORY
+        gold,produce_shit = (self.factory(packets_pumped,main_data['MANA_GOLD'],main_data['MANA_SHIT']))
+        
+        #FILTERS
+        main_data['shit'] = self.filters(main_data['shit'],produce_shit)
+        
+        #NATURE
+        main_data['nature'] = self.nature_in(main_data['nature'],main_data['shit'],main_data['NATURE_LEVEL'],main_data['people'])
+        
+        #PEOPLE
+        main_data['people'] = self.people_in(main_data['people'],main_data['nature'],main_data['shit'])
+        
         #REGENERATION MINE
-        main_data['capacity'] += main_data['REGENERATION']
-        if main_data['capacity'] > main_data['CAPACITY_LEVEL']:
-            main_data['capacity'] = main_data['CAPACITY_LEVEL']
-       
+        main_data['capacity'] = self.regeneration_mine(main_data['REGENERATION'], main_data['capacity'],main_data['CAPACITY_LEVEL'])
+        
+        #send results
         self.main_answer(main_data)
         self.spread_shit(main_data)
             
@@ -110,9 +142,5 @@ class CellWalker(object):
         for key in variables:
             tmp_dict[key] = dict_data[key]
         return tmp_dict
-        
-        
-        
 
-cellwalker = CellWalker()
-
+#cellwalker = CellWalker()
