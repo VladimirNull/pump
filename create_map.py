@@ -21,9 +21,9 @@ def create_map(len_x,len_y):
             CAPACITY_LEVEL = random.randrange(1000,10000)
             player_id = None
             people = 100
-            shit = 0
-            capacity = CAPACITY_LEVEL
-            nature = NATURE_LEVEL
+            shit = random.randrange(10,10000)
+            capacity = random.randrange(CAPACITY_LEVEL)
+            nature = random.randrange(NATURE_LEVEL)
             pump_level = 1
             
             cell = {'x':x,'y':y,'NATURE_LEVEL':NATURE_LEVEL,'PRESSURE':PRESSURE,
@@ -32,13 +32,24 @@ def create_map(len_x,len_y):
                     'people':people,'shit':shit,'capacity':capacity,'nature':nature,'pump_level':pump_level}
 
             print cell
-            db.map.insert(cell) 
+            db.map.insert(cell)
+
+def random_player():
+    client = MongoClient()
+    db = client.test
+    cursor = db.players.find()
+    return cursor[random.randrange(0,cursor.count())]['_id']
+
 def read_map():
     cursor = db.map.find()
+    i = 0
     for document in cursor:
-        print document
-        if str(document['_id']) == '594d770477097b0bd795bd36':
+        if i < 10:
             print document
+            i += 1
+        else:
+            break
+        
 def delete_map():
     cursor = db.map.drop()
 
@@ -57,4 +68,4 @@ if answ=='1':
         if i > 10000: break;
 else:        
     delete_map()
-    create_map(1,1)
+    create_map(100,100)

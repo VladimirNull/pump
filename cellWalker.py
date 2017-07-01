@@ -13,30 +13,20 @@ class CellWalker(object):
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
                      'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')
-        thread = threading.Thread(target=self.run, args=())
-        thread.daemon = True 
-        thread.start()
         
     def __str__(self):
         return "there is nothing to see"
-        
-    def run(self):
-        i = 0
-        while True:
-            self.longwalk()
-            i += 1;
-            if i>12000: break;
-            time.sleep(0.1)
-    def refresh(self):
-        pass
     
-    def longwalk(self):
+    def longwalk(self):#one lap over map
         cursor = self.db.map.find()
         for document in cursor:
             main_data = {}
             for key in self.main_keys:
                 main_data[key] = document[key]
-            self.step(main_data)
+            if main_data['player_id'] == None:
+                self.relax(main_data)
+            else:
+                self.step(main_data)
             
     def mine(self,capacity,packets_pumped):
         #TODO random
@@ -89,13 +79,13 @@ class CellWalker(object):
         perform_people = (nature)*10 # 1 tree vs 100 people
         children_of_nature = ((nature)*10)/(people+0.0001)
         if children_of_nature > 1:#free
-            born = (people/4)+random.randrange(1,int(abs(people))**(1/3.0))
+            born = (people/4)+random.randrange(1, int(abs(people)**(1/3.0)+2)  )
             tmp_people = people + born
         elif children_of_nature > 0.49 and children_of_nature < 1:#norm
             tmp_people = people + (math.sqrt(people)/4)
         elif children_of_nature < 0.5:#help us
             #TODO this
-            tmp_people = people - (math.sqrt(people)+random.randrange(1,int(abs(people)**(1/3.0))))
+            tmp_people = people - (math.sqrt(people)+random.randrange(1, (int(abs(people)**(1/3.0))+2)   ))
         if tmp_people < 0 or (round(tmp_people) == 0.0):
             tmp_people = 0
         return tmp_people
@@ -106,6 +96,17 @@ class CellWalker(object):
             capacity = capacity_level
         return capacity
         
+    def regeneration_nature(self,nature_level,nature):
+        if (nature_level > nature):
+            nature += math.sqrt(nature_level - nature)  
+        else:
+            nature -= math.sqrt(nature - nature_level)
+        return nature
+    
+    def clean_shit(self,nature,shit):
+        shit = shit - nature
+        shit = 0 if shit <= 0 else shit
+        return shit
 
     def step(self,main_data):
         #MINE
@@ -129,18 +130,36 @@ class CellWalker(object):
         #send results
         self.main_answer(main_data)
         self.spread_shit(main_data)
+        self.profit_play(main_data,gold)
             
     def main_answer(self,dict_data):      
         self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['people','capacity','nature'])})
         
     def spread_shit(self,dict_data):
         self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['shit'])})
-
+    
+    def profit_play(self,dict_data,gold):
+        self.db.players.update({"_id": ObjectId(dict_data['player_id'])},{'$inc':{'gold':gold}})
         
     def packing(self,dict_data,variables):
         tmp_dict = {}       
         for key in variables:
             tmp_dict[key] = dict_data[key]
-        return tmp_dict
+        return tmp_dict    
+        
+    def relax(self,main_data):
+        if main_data['NATURE_LEVEL'] == main_data['nature'] and main_data['CAPACITY_LEVEL'] == main_data['capacity'] and main_data['shit'] == 0:
+            pass
+        else:
+            if main_data['NATURE_LEVEL'] == round(main_data['nature']) and main_data['CAPACITY_LEVEL'] == round(main_data['capacity']) and round(main_data['shit']) == 0:
+                main_data['nature'] = main_data['NATURE_LEVEL']
+                main_data['capacity'] = main_data['CAPACITY_LEVEL']
+                main_data['shit'] = 0
+            else:
+                main_data['capacity'] = self.regeneration_mine(main_data['REGENERATION'], main_data['capacity'],main_data['CAPACITY_LEVEL'])
+                main_data['nature'] = self.regeneration_nature(main_data['NATURE_LEVEL'],main_data['nature'])
+                main_data['shit'] = self.clean_shit(main_data['nature'], main_data['shit'])
+            self.db.map.update({"_id": ObjectId(main_data['_id'])},{'$set':self.packing(main_data,['nature','capacity','shit'])})
+        
 
 #cellwalker = CellWalker()
