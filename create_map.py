@@ -68,4 +68,4 @@ if answ=='1':
         if i > 10000: break;
 else:        
     delete_map()
-    create_map(100,100)
+    create_map(5,5)

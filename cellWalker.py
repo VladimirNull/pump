@@ -5,27 +5,84 @@ import threading
 import time
 from bson.objectid import ObjectId
 import math
+import threading
+from Queue import Queue
 
 class CellWalker(object):
     def __init__(self):
+        self.num_threads = 4
         self.timer = time.time()
         self.db = MongoClient().test
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
                      'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')
         
+        self.slice_row = self.slice_map(self.num_threads)
+        self.q = Queue()
+        self.run_tasks()
+        
     def __str__(self):
         return "there is nothing to see"
+        
+    def run_tasks(self):
+        for task in self.slice_row:
+            self.q.put(task)
+        for i in range(4):
+            thread = threading.Thread(target=self.worker)
+            thread.daemon = True 
+            thread.start()
     
-    def longwalk(self):#one lap over map
+    def worker(self):
+        while True:
+            task = self.q.get()
+            self.walkrow(task) 
+            self.q.task_done()
+    
+    def slice_map(self,bt):
+        tmp = []
         cursor = self.db.map.find()
+        length_cursor = cursor.count()-1
+        if length_cursor == -1:
+            return False
+        cnt = length_cursor // bt
+        pntr = 0
+        for i in range(1,bt):
+            a_pntr = pntr
+            pntr+=cnt
+            b_pntr = pntr
+            pntr+=1
+            tmp.append([a_pntr,b_pntr])
+        b_pntr += 1
+        if b_pntr!=length_cursor:
+            tmp.append([b_pntr,length_cursor])
+        pntr = 0
+        ver_tmp = []
+        for verify in tmp:
+            if verify[0]<verify[1] and verify[1] > pntr:
+                ver_tmp.append(verify)
+                pntr = verify[1]+1
+        if ver_tmp == []:
+            return [cursor[0]['_id']]
+        ret_row = []
+        print "building ids of map"
+        for i in ver_tmp:
+            tmp_row = []
+            for g in range(i[0],i[1]):
+                tmp_row.append(cursor[g]['_id'])
+            ret_row.append([tmp_row])
+        return ret_row            
+    
+    def walkrow(self,row):#one lap over map
+        cursor = self.db.map.find({"_id": { "$in": row[0] } })
         for document in cursor:
             main_data = {}
             for key in self.main_keys:
                 main_data[key] = document[key]
             if main_data['player_id'] == None:
+                print "relax"
                 self.relax(main_data)
             else:
+                print "step"
                 self.step(main_data)
             
     def mine(self,capacity,packets_pumped):
@@ -162,4 +219,4 @@ class CellWalker(object):
             self.db.map.update({"_id": ObjectId(main_data['_id'])},{'$set':self.packing(main_data,['nature','capacity','shit'])})
         
 
-#cellwalker = CellWalker()
+cellwalker = CellWalker()
