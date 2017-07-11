@@ -15,8 +15,7 @@ class CellWalker(object):
         self.db = MongoClient().test
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
-                     'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')
-        
+                     'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')        
         self.slice_row = self.slice_map(self.num_threads)
         self.q = Queue()
         self.run_tasks()
@@ -217,6 +216,5 @@ class CellWalker(object):
                 main_data['nature'] = self.regeneration_nature(main_data['NATURE_LEVEL'],main_data['nature'])
                 main_data['shit'] = self.clean_shit(main_data['nature'], main_data['shit'])
             self.db.map.update({"_id": ObjectId(main_data['_id'])},{'$set':self.packing(main_data,['nature','capacity','shit'])})
-        
-
+            
 cellwalker = CellWalker()

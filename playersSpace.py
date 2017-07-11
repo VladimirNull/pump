@@ -4,9 +4,6 @@ import os
 import time
 from bson.objectid import ObjectId
 
-client = MongoClient()
-db = client.test
-
 class PlayersSpace(object):
     def __init__(self):
         self.players = db.players
@@ -47,7 +44,7 @@ class PlayersSpace(object):
         print "========="
         cell = db.map.find()
         for doc in cell:
-            print doc['_id'],doc['player_id']
+            print doc['_id'],doc['player_id'],"x=",doc['x'],"y=",doc['y']
     
     def grab_cell(self,cell_id,player_id):
         player = self.players.find({'_id': ObjectId(player_id)})
@@ -65,8 +62,22 @@ class PlayersSpace(object):
                 mass.remove(cell_id)
                 self.players.update({"_id": ObjectId(player_id)},{'$set':{'cells':mass}})
                 db.map.update({"_id": ObjectId(cell_id)},{'$set':{'player_id':None}})
-            
+    
+    def showtv(self,player_id,xr,yr):
+        player = self.players.find({"_id": ObjectId(player_id)})
+        x_player = player[0]['cursor_view'][0]
+        y_player = player[0]['cursor_view'][1]
+        print "x,y",x_player,y_player
+        cells = db.map.find({'$and':[{'x':{'$gte':x_player-xr}},{'x':{'$lte':x_player+yr}},\
+                                     {'y':{'$gte':x_player-xr}},{'y':{'$lte':x_player+yr}}]})
+        for cell in cells:
+            print cell['x'],cell['y']
         
+    
 
+client = MongoClient()
+db = client.test            
 ps = PlayersSpace()
 ps.show_db()
+
+ps.showtv('59650c9677097b14458e0593',1,1)

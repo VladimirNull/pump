@@ -13,7 +13,8 @@ def create_players(n):
         NAME = "num",random.randrange(0,9),random.randrange(0,9),random.randrange(0,9)
         gold = 0
         cells = []
-        player = {'NAME':NAME,'cells':cells,'gold':gold}
+        cursor_view = [5,5]
+        player = {'NAME':NAME, 'cells':cells, 'gold':gold, 'cursor_view':cursor_view}
         db.players.insert(player)
         
 def delete_players():
