@@ -217,4 +217,3 @@ class CellWalker(object):
                 main_data['shit'] = self.clean_shit(main_data['nature'], main_data['shit'])
             self.db.map.update({"_id": ObjectId(main_data['_id'])},{'$set':self.packing(main_data,['nature','capacity','shit'])})
             
-cellwalker = CellWalker()
