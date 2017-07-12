@@ -66,17 +66,23 @@ player_select = None
 client = MongoClient()
 db = client.test            
 ps = PlayersSpace()
-ps.show_db()
+cellwalk = CellWalker()
 
 while True:
-    print "1.step\n2.player manage\n3.administration\nq.Quit"
+    print "player_select ",player_select
+    print "0.auto complete\n1.step\n2.player manage\n3.administration\n4.show player\nq.Quit"
     answ1 = raw_input("input.")
+    if answ1 == "0":
+        cursor = db.players.find()
+        player_select = cursor[0]['_id']
+        cursor = db.map.find()
+        cell_select = cursor[0]['_id']
+        ps.grab_cell(cell_select,player_select)
     if answ1 == "1":
-        print "coming soon"
+        cellwalk.walkrow()
     elif answ1 == "2":
         while True:
-            print "player_select ",player_select
-            print "1.select player\n2.add cell\nq.Quit"
+            print "1.select player\n2.get cell\nq.Quit"
             answ3 = raw_input("input.")
             if answ3 == "1":
                 cursor = db.players.find()
@@ -84,10 +90,25 @@ while True:
                 for document in cursor:
                     print i,document['_id']
                     i += 1
-                answ4 = raw_input("input number id")
+                answ4 = raw_input("input number id: ")
                 cursor = db.players.find()
-                player_select = cursor[int(answ4)]['_id']       
-    elif answ1 == 3:        
+                player_select = cursor[int(answ4)]['_id']
+            if answ3 == "2":
+                if player_select == None:
+                    print "select player"
+                else:
+                    cursor = db.map.find()
+                    i = 0
+                    for document in cursor:
+                        print i,document['_id']
+                        i += 1
+                    answ5 = raw_input("input number id cell: ")
+                    cursor = db.map.find()
+                    cell_select = cursor[int(answ5)]['_id']
+                    ps.grab_cell(cell_select,player_select)
+            if answ3 == "q":
+                break
+    elif answ1 == "3":        
         print "1.create player\n2.delete players\n3.show players\nq.Quit"
         answ2 = raw_input("Ask user for something.")
         if answ2 == "1":
@@ -98,6 +119,10 @@ while True:
             read_players()
         elif answ2 == "q":
             break
-        
-    
-    
+    elif answ1 == "4":
+        if player_select == None:
+            print "select player"
+        else:
+            dict_tmp = ps.show_player(player_select)
+            for item in dict_tmp[0].items():
+                print item

@@ -4,6 +4,9 @@ import os
 import time
 from bson.objectid import ObjectId
 
+client = MongoClient()
+db = client.test
+
 class PlayersSpace(object):
     def __init__(self):
         self.players = db.players
@@ -22,19 +25,26 @@ class PlayersSpace(object):
         for document in cursor:
             tmp.append(document)
         return tmp
+    
+    def show_player(self,player_id):
+        tmp = self.players.find({'_id': ObjectId(player_id)})
+        return tmp
         
     def delete_player(self,player_id):
         result = self.players.delete_one({'_id': ObjectId(player_id)})
     
-    def cell_for_grab(self,cell_id):
+    def cell_grabable(self,cell_id):
         cell = db.map.find({'_id': ObjectId(cell_id)})
         if cell.count() == 1:#cell excists          
             if cell[0]['player_id'] == None:#cell grabable
                 return True
         return False
     
-    def cell_for_free(self,cell_id,player_id):
-        cell = self.players.find({'_id': ObjectId(player_id)})
+    def player_can_grab(self,cell_id,player):
+        player_cells = player['cells']
+        if (ObjectId(cell_id) not in player_cells):
+            return True
+        return False
     
     def show_db(self):
         player = self.players.find()
@@ -49,7 +59,7 @@ class PlayersSpace(object):
     def grab_cell(self,cell_id,player_id):
         player = self.players.find({'_id': ObjectId(player_id)})
         if player.count() == 1:#player isset
-            if self.cell_for_grab(cell_id):
+            if self.cell_grabable(cell_id) and self.player_can_grab(cell_id,player[0]):
                 self.players.update({"_id": ObjectId(player_id)},{'$push':{'cells':cell_id}})
                 db.map.update({"_id": ObjectId(cell_id)},{'$set':{'player_id':player_id}})        
     
@@ -72,12 +82,3 @@ class PlayersSpace(object):
                                      {'y':{'$gte':x_player-xr}},{'y':{'$lte':x_player+yr}}]})
         for cell in cells:
             print cell['x'],cell['y']
-        
-    
-
-client = MongoClient()
-db = client.test            
-ps = PlayersSpace()
-ps.show_db()
-
-ps.showtv('59650c9677097b14458e0593',1,1)

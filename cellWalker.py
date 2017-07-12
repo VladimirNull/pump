@@ -17,11 +17,19 @@ class CellWalker(object):
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
                      'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')        
         self.slice_row = self.slice_map(self.num_threads)
-        self.q = Queue()
-        self.run_tasks()
+        self.row_all_cells = self.all_cells()
+        #self.q = Queue()
+        #self.run_tasks()
         
     def __str__(self):
         return "there is nothing to see"
+    
+    def all_cells(self):
+        tmp = []
+        cursor = self.db.map.find()
+        for doc in cursor:
+            tmp.append(doc['_id'])
+        return tmp
         
     def run_tasks(self):
         for task in self.slice_row:
@@ -71,17 +79,16 @@ class CellWalker(object):
             ret_row.append([tmp_row])
         return ret_row            
     
-    def walkrow(self,row):#one lap over map
+    def walkrow(self,row = []):#one lap over map
+        row.append(self.row_all_cells)
         cursor = self.db.map.find({"_id": { "$in": row[0] } })
         for document in cursor:
             main_data = {}
             for key in self.main_keys:
                 main_data[key] = document[key]
             if main_data['player_id'] == None:
-                print "relax"
                 self.relax(main_data)
             else:
-                print "step"
                 self.step(main_data)
             
     def mine(self,capacity,packets_pumped):
