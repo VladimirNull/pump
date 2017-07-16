@@ -87,8 +87,10 @@ class CellWalker(object):
             for key in self.main_keys:
                 main_data[key] = document[key]
             if main_data['player_id'] == None:
+                #print "relax"
                 self.relax(main_data)
             else:
+                #print "step"
                 self.step(main_data)
             
     def mine(self,capacity,packets_pumped):
@@ -194,6 +196,7 @@ class CellWalker(object):
         self.main_answer(main_data)
         self.spread_shit(main_data)
         self.profit_play(main_data,gold)
+        self.remain_master(main_data)
             
     def main_answer(self,dict_data):      
         self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['people','capacity','nature'])})
@@ -208,7 +211,24 @@ class CellWalker(object):
         tmp_dict = {}       
         for key in variables:
             tmp_dict[key] = dict_data[key]
-        return tmp_dict    
+        return tmp_dict
+    
+    def remain_master(self,dict_data):
+        #print dict_data['people']
+        if dict_data['people'] <= 0:
+                #print dict_data
+            player_id = dict_data['player_id']
+            cells = self.db.players.find({"_id": ObjectId(player_id)})[0]['cells']
+            #print "+++++++++++",cells
+            self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':{'player_id':None}})
+            cells.remove(ObjectId(dict_data['_id']))
+            #print cells
+            self.db.players.update({"_id": ObjectId(player_id)},{'$set':{'cells':cells}})
+            #print "----------cell----------",self.db.map.find({"_id": ObjectId(dict_data['_id'])})[0]
+            #print "-----------player---------",self.db.players.find({"_id": ObjectId(player_id)})[0]
+        
+        
+            
         
     def relax(self,main_data):
         if main_data['NATURE_LEVEL'] == main_data['nature'] and main_data['CAPACITY_LEVEL'] == main_data['capacity'] and main_data['shit'] == 0:
