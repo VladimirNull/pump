@@ -15,7 +15,8 @@ class CellWalker(object):
         self.db = MongoClient().test
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
-                     'player_id', 'people', 'shit', 'capacity','nature','_id','pump_level')        
+                     'player_id', 'people', 'shit', 'capacity','nature','_id',
+                     'pump_level','mine','factory')        
         self.slice_row = self.slice_map(self.num_threads)
         self.row_all_cells = self.all_cells()
         #self.q = Queue()
@@ -93,7 +94,13 @@ class CellWalker(object):
                 #print "step"
                 self.step(main_data)
             
-    def mine(self,capacity,packets_pumped):
+    def mine_st(self,capacity,pressure,pump_level,mine,factory):
+        packets_pumped = pressure*pump_level*mine[1]
+        #overpump shit
+        overshit = packets_pumped * (1-mine[0])
+        if mine[1] > 1:
+            overshit = overshit * (mine[1]^3) * factory[1]
+        produce_shit = overshit
         #TODO random
         if capacity - packets_pumped < 0:
             ret_packets_pumped = capacity
@@ -101,11 +108,16 @@ class CellWalker(object):
         else:
             ret_packets_pumped = packets_pumped
             ret_capacity = capacity - packets_pumped
-        return ret_capacity,ret_packets_pumped
+        return ret_capacity, ret_packets_pumped, produce_shit
 
-    def factory(self,packets_pumped,mana_gold,mana_shit):
+    def factory_st(self, packets_pumped, mana_gold, mana_shit, factory, produce_shit):
         #TODO random
-        return packets_pumped * mana_gold, packets_pumped * mana_shit
+        gold = packets_pumped * mana_gold
+        overshit = packets_pumped * factory[1]*0.01
+        shifted_shit = gold * factory[0]
+        gold = gold - shifted_shit 
+        produce_shit += (packets_pumped * mana_shit) + shifted_shit + overshit
+        return gold, produce_shit
         
     def filters(self,shit,produce_shit):
         #TODO clean shit
@@ -175,10 +187,18 @@ class CellWalker(object):
 
     def step(self,main_data):
         #MINE
-        main_data['capacity'],packets_pumped = (self.mine(main_data['capacity'],(main_data['PRESSURE']*main_data['pump_level'])))
+        main_data['capacity'],packets_pumped,produce_shit = (self.mine_st(  main_data['capacity'],
+                                                                            main_data['PRESSURE'],
+                                                                            main_data['pump_level'],
+                                                                            main_data['mine'],
+                                                                            main_data['factory']))
         
         #FACTORY
-        gold,produce_shit = (self.factory(packets_pumped,main_data['MANA_GOLD'],main_data['MANA_SHIT']))
+        gold,produce_shit = (self.factory_st(   packets_pumped,
+                                                main_data['MANA_GOLD'],
+                                                main_data['MANA_SHIT'],
+                                                main_data['factory'],
+                                                produce_shit))
         
         #FILTERS
         main_data['shit'] = self.filters(main_data['shit'],produce_shit)
@@ -225,10 +245,7 @@ class CellWalker(object):
             #print cells
             self.db.players.update({"_id": ObjectId(player_id)},{'$set':{'cells':cells}})
             #print "----------cell----------",self.db.map.find({"_id": ObjectId(dict_data['_id'])})[0]
-            #print "-----------player---------",self.db.players.find({"_id": ObjectId(player_id)})[0]
-        
-        
-            
+            #print "-----------player---------",self.db.players.find({"_id": ObjectId(player_id)})[0]            
         
     def relax(self,main_data):
         if main_data['NATURE_LEVEL'] == main_data['nature'] and main_data['CAPACITY_LEVEL'] == main_data['capacity'] and main_data['shit'] == 0:

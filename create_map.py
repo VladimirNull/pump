@@ -25,11 +25,14 @@ def create_map(len_x,len_y):
             capacity = random.randrange(CAPACITY_LEVEL)
             nature = random.randrange(NATURE_LEVEL)
             pump_level = 1
+            mine = [0.1,1]
+            factory = [0.1,1]
             
             cell = {'x':x,'y':y,'NATURE_LEVEL':NATURE_LEVEL,'PRESSURE':PRESSURE,
                     'MANA_GOLD':MANA_GOLD,'MANA_SHIT':MANA_SHIT,'REGENERATION':REGENERATION,
                     'CAPACITY_LEVEL':CAPACITY_LEVEL,'player_id':player_id,
-                    'people':people,'shit':shit,'capacity':capacity,'nature':nature,'pump_level':pump_level}
+                    'people':people,'shit':shit,'capacity':capacity,'nature':nature,'pump_level':pump_level,
+                    'mine':mine,'factory':factory}
 
             print cell
             db.map.insert(cell)

@@ -79,7 +79,7 @@ while True:
         cell_select = cursor[0]['_id']
         ps.grab_cell(cell_select,player_select)
     if answ1 == "1":
-        for i in range(1,100):
+        for i in range(1,1):
             cellwalk.walkrow()
     elif answ1 == "2":
         while True:
