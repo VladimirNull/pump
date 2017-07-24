@@ -27,12 +27,13 @@ def create_map(len_x,len_y):
             pump_level = 1
             mine = [0.1,1]
             factory = [0.1,1]
+            filter_sh = [1,0.1]
             
             cell = {'x':x,'y':y,'NATURE_LEVEL':NATURE_LEVEL,'PRESSURE':PRESSURE,
                     'MANA_GOLD':MANA_GOLD,'MANA_SHIT':MANA_SHIT,'REGENERATION':REGENERATION,
                     'CAPACITY_LEVEL':CAPACITY_LEVEL,'player_id':player_id,
                     'people':people,'shit':shit,'capacity':capacity,'nature':nature,'pump_level':pump_level,
-                    'mine':mine,'factory':factory}
+                    'mine':mine,'factory':factory,'filter_sh':filter_sh}
 
             print cell
             db.map.insert(cell)
@@ -71,4 +72,4 @@ if answ=='1':
         if i > 10000: break;
 else:        
     delete_map()
-    create_map(1,1)
+    create_map(5,5)

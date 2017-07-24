@@ -60,6 +60,19 @@ if answ=='1':
     
 def create_pl():  
     create_players(1)
+ 
+def show_walk():
+    cells = None
+    dict_tmp = ps.show_player(player_select)
+    for item in dict_tmp[0].items():
+        if item[0] == 'cells':
+            cells = item[1]
+            print item
+    if cells != None:
+        print "============cell================"
+        for cell in cells:
+            cursor = db.map.find({"_id": cell})
+            print cursor[0]
 
 player_select = None
 
@@ -79,8 +92,10 @@ while True:
         cell_select = cursor[0]['_id']
         ps.grab_cell(cell_select,player_select)
     if answ1 == "1":
-        for i in range(1,1):
+        for i in range(1,10):
             cellwalk.walkrow()
+            show_walk()
+            time.sleep(4)
     elif answ1 == "2":
         while True:
             print "1.select player\n2.get cell\nq.Quit"
@@ -124,6 +139,4 @@ while True:
         if player_select == None:
             print "select player"
         else:
-            dict_tmp = ps.show_player(player_select)
-            for item in dict_tmp[0].items():
-                print item
+            show_walk()

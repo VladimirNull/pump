@@ -16,7 +16,7 @@ class CellWalker(object):
         self.main_keys = ('NATURE_LEVEL', 'PRESSURE', 'MANA_GOLD', 
                      'MANA_SHIT', 'REGENERATION', 'CAPACITY_LEVEL',
                      'player_id', 'people', 'shit', 'capacity','nature','_id',
-                     'pump_level','mine','factory')        
+                     'pump_level','mine','factory','filter_sh')        
         self.slice_row = self.slice_map(self.num_threads)
         self.row_all_cells = self.all_cells()
         #self.q = Queue()
@@ -119,9 +119,22 @@ class CellWalker(object):
         produce_shit += (packets_pumped * mana_shit) + shifted_shit + overshit
         return gold, produce_shit
         
-    def filters(self,shit,produce_shit):
-        #TODO clean shit
-        return shit+produce_shit
+    def filters(self,shit,filter_sh,produce_shit):
+        filter_clean = filter_sh[0]
+        filter_level = filter_sh[1]
+        print "                ---             "
+        filtered_shit = produce_shit * filter_level * filter_clean
+        print 'produce_shit',produce_shit
+        print 'filtered_shit',filtered_shit
+        produce_shit = produce_shit - filtered_shit
+        print 'filter_clean before',filter_clean
+        filter_clean = filter_clean - ((1-filter_level)/100)
+        print 'filter_clean after',filter_clean
+        
+        shit = shit + produce_shit
+        filter_sh = [filter_clean,filter_level]
+        
+        return shit, filter_sh
         
     def nature_in(self,nature,shit,nature_level,people):
         junk_yard = ((nature)*20)/(shit+0.0001)# 1 tree vs 20 piece of shit
@@ -201,7 +214,7 @@ class CellWalker(object):
                                                 produce_shit))
         
         #FILTERS
-        main_data['shit'] = self.filters(main_data['shit'],produce_shit)
+        main_data['shit'],main_data['filter_sh'] = self.filters(main_data['shit'],main_data['filter_sh'],produce_shit)
         
         #NATURE
         main_data['nature'] = self.nature_in(main_data['nature'],main_data['shit'],main_data['NATURE_LEVEL'],main_data['people'])
@@ -219,7 +232,7 @@ class CellWalker(object):
         self.remain_master(main_data)
             
     def main_answer(self,dict_data):      
-        self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['people','capacity','nature'])})
+        self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['people','capacity','nature','filter_sh'])})
         
     def spread_shit(self,dict_data):
         self.db.map.update({"_id": ObjectId(dict_data['_id'])},{'$set':self.packing(dict_data,['shit'])})
