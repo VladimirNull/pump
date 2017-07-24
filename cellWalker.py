@@ -122,14 +122,14 @@ class CellWalker(object):
     def filters(self,shit,filter_sh,produce_shit):
         filter_clean = filter_sh[0]
         filter_level = filter_sh[1]
-        print "                ---             "
+        print "                -+-+-             "
         filtered_shit = produce_shit * filter_level * filter_clean
         print 'produce_shit',produce_shit
         print 'filtered_shit',filtered_shit
         produce_shit = produce_shit - filtered_shit
         print 'filter_clean before',filter_clean
         filter_clean = filter_clean - ((1-filter_level)/100)
-        print 'filter_clean after',filter_clean
+        print 'filt+er_clean after',filter_clean
         
         shit = shit + produce_shit
         filter_sh = [filter_clean,filter_level]

@@ -69,7 +69,7 @@ def show_walk():
             cells = item[1]
             print item
     if cells != None:
-        print "============cell================"
+        print "==========+==cell==+=============="
         for cell in cells:
             cursor = db.map.find({"_id": cell})
             print cursor[0]
